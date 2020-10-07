@@ -2,9 +2,10 @@ package com.example.criminalintent
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import androidx.fragment.app.Fragment
 import java.lang.reflect.Array.newInstance
 
-class MainActivity : AppCompatActivity() {
+open class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -18,4 +19,4 @@ class MainActivity : AppCompatActivity() {
                 .add(R.id.fragment_container, CrimeListFragment.newInstance())
                 .commit()
         }
-    }
+}
