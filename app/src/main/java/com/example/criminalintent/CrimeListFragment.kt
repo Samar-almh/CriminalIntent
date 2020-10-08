@@ -1,5 +1,7 @@
 package com.example.criminalintent
 
+import android.icu.text.SimpleDateFormat
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -9,6 +11,7 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProviders
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -67,13 +70,19 @@ class CrimeListFragment : Fragment() {
             itemView.setOnClickListener(this)
         }
 
+        @RequiresApi(Build.VERSION_CODES.N)
         fun bind(crime: Crime) {
             this.crime = crime
             titleTextView.text = this.crime.title
-            dateTextView.text = this.crime.date.toString()
+           // dateTextView.text = this.crime.date.toString()
 
 
-            ////////////
+           //The date
+            val pattern = "EEEE, MMMM dd, yyyy"
+            val simpleDateFormat = SimpleDateFormat(pattern)
+            val dateString = simpleDateFormat.format(crime.date)
+            dateTextView.setText(dateString)
+
             //solvedImageView.visibility = if (crime.isSolved) {
               //  View.VISIBLE
            // } else {
