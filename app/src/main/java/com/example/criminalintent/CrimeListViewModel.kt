@@ -9,9 +9,9 @@ class CrimeListViewModel : ViewModel() {
             val crime = Crime()
             crime.title = "Crime #$i"
             crime.isSolved = i % 2 == 0
-           // crimes += crime
-            //  set requires police 1 in every 6
-            crime.requiresPolice = (i % 6 == 0)
+            //crimes += crime
+            //  set requires police 1 in every 2
+            crime.requiresPolice = (i % 2== 0)
             crimes.add(crime)
 
         }
