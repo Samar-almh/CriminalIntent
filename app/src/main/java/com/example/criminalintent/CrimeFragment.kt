@@ -1,5 +1,3 @@
-package com.example.criminalintent
-
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -10,18 +8,19 @@ import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import androidx.fragment.app.Fragment
+import com.example.criminalintent.Crime
+import com.example.criminalintent.R
 
 class CrimeFragment : Fragment() {
     private lateinit var crime: Crime
     private lateinit var titleField: EditText
     private lateinit var dateButton: Button
     private lateinit var solvedCheckBox: CheckBox
-
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         crime = Crime()
     }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -36,8 +35,10 @@ class CrimeFragment : Fragment() {
             isEnabled = false
         }
 
+
         return view
     }
+
     override fun onStart() {
         super.onStart()
         val titleWatcher = object : TextWatcher {
@@ -46,19 +47,16 @@ class CrimeFragment : Fragment() {
                 start: Int,
                 count: Int,
                 after: Int
-            ) {
-// This space intentionally left blank
+            ) {                // This space intentionally left blank
             }
+
             override fun onTextChanged(
-                sequence: CharSequence?,
-                start: Int,
-                before: Int,
-                count: Int
+                sequence: CharSequence?, start: Int, before: Int, count: Int
             ) {
                 crime.title = sequence.toString()
             }
-            override fun afterTextChanged(sequence: Editable?) {
-// This one too
+
+            override fun afterTextChanged(sequence: Editable?) {                // This one too            }        }
             }
         }
         titleField.addTextChangedListener(titleWatcher)
