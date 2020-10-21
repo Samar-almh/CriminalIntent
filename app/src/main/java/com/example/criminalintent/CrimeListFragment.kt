@@ -145,7 +145,7 @@ class CrimeListFragment : Fragment() {
 
 
         override fun getItemViewType(position: Int): Int {
-            return if (getItem(position).isSolved == false)
+            return if (crimes[position].isSolved== false)
                 return dangerCrime
             else
                 return normalCrime
