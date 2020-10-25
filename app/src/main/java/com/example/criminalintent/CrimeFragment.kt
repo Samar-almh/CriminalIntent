@@ -1,15 +1,22 @@
+import android.Manifest
+import android.app.Activity
 import android.app.ProgressDialog.show
 import android.app.TimePickerDialog
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
+import android.net.Uri
 import android.os.Bundle
+import android.provider.ContactsContract
 import android.text.Editable
 import android.text.TextWatcher
+import android.text.format.DateFormat
 import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProviders
 import java.util.*
@@ -24,6 +31,12 @@ private const val DIALOG_DATE = "DialogDate"
 private const val REQUEST_DATE = 0
 private val DIALOG_TIME = "dialogTime"
 private val REQUEST_TIME = 1
+private const val REQUEST_CONTACT = 1
+private const val DATE_FORMAT = "EEE, MMM, dd"
+//ch15
+private val CONTACTS_PERMISSIONS = arrayOf(Manifest.permission.READ_CONTACTS)
+private val REQUEST_CONTACTS_PERMISSIONS = 3
+
 
 class CrimeFragment : Fragment(), DatePickerFragment.Callbacks {
     private lateinit var crime: Crime
@@ -31,6 +44,10 @@ class CrimeFragment : Fragment(), DatePickerFragment.Callbacks {
     private lateinit var dateButton: Button
     private lateinit var solvedCheckBox: CheckBox
      private lateinit var timeButton: Button
+    private lateinit var reportButton: Button
+    private lateinit var suspectButton: Button
+    //ch15
+    lateinit var callSuspectButton: Button
 
     private val crimeDetailViewModel: CrimeDetailViewModel by lazy {
         ViewModelProviders.of(this).get(CrimeDetailViewModel::class.java)
@@ -43,6 +60,8 @@ class CrimeFragment : Fragment(), DatePickerFragment.Callbacks {
         //Log.d(TAG, "args bundle crime ID: $crimeId")
 // Eventually, load crime from database
         crimeDetailViewModel.loadCrime(crimeId)
+
+
     }
 
     override fun onCreateView(
@@ -55,6 +74,8 @@ class CrimeFragment : Fragment(), DatePickerFragment.Callbacks {
         dateButton = view.findViewById(R.id.crime_date) as Button
         solvedCheckBox = view.findViewById(R.id.crime_solved) as CheckBox
         timeButton = view.findViewById(R.id.crime_time) as Button
+        reportButton = view.findViewById(R.id.crime_report) as Button
+        suspectButton = view.findViewById(R.id.crime_suspect) as Button
         //dateButton.apply {
           //  text = crime.date.toString()
            // isEnabled = false }
@@ -110,6 +131,50 @@ class CrimeFragment : Fragment(), DatePickerFragment.Callbacks {
                 show(this@CrimeFragment.requireFragmentManager(), DIALOG_DATE)
             }
         }
+
+        reportButton.setOnClickListener {
+
+            Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, getCrimeReport())
+                putExtra(Intent.EXTRA_SUBJECT, getString(R.string.crime_report_subject))
+            }.also { intent ->
+                //startActivity(intent)*/
+
+                val chooserIntent =
+                    Intent.createChooser(intent, getString(R.string.send_report))
+                startActivity(chooserIntent)
+            }
+        }
+
+        // Ch15
+        val callContact = Intent(Intent.ACTION_DIAL)
+        callSuspectButton = view?.findViewById<View>(R.id.call_suspect) as Button
+        callSuspectButton.setOnClickListener {
+            val numberString = "tel:" + crime.suspectPhone
+            val number = Uri.parse(numberString)
+            callContact.data = number
+            startActivity(callContact)
+        }
+
+
+
+        suspectButton.apply {
+            val pickContactIntent =
+                Intent(Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI)
+            setOnClickListener {
+                startActivityForResult(pickContactIntent, REQUEST_CONTACT)
+            }
+            //pickContactIntent.addCategory(Intent.CATEGORY_HOME)
+            val packageManager: PackageManager = requireActivity().packageManager
+            val resolvedActivity: ResolveInfo? =
+                packageManager.resolveActivity(pickContactIntent,
+                    PackageManager.MATCH_DEFAULT_ONLY)
+            if (resolvedActivity == null) {
+                isEnabled = false
+            }
+        }
+
         timeButton.setOnClickListener {
             val cal = Calendar.getInstance()
             val timeSetListener = TimePickerDialog.OnTimeSetListener { timePicker, hour, minute ->
@@ -128,11 +193,6 @@ class CrimeFragment : Fragment(), DatePickerFragment.Callbacks {
         crimeDetailViewModel.saveCrime(crime)
     }
 
-     fun onDateSelected(time: Time) {
-        TODO("Not yet implemented")
-    }
-
-
 
     override fun onDateSelected(date: Date) {
         crime.date = date
@@ -147,6 +207,132 @@ class CrimeFragment : Fragment(), DatePickerFragment.Callbacks {
             isChecked = crime.isSolved
             jumpDrawablesToCurrentState()
         }
+        if (crime.suspect.isNotEmpty()) {
+            suspectButton.text = crime.suspect
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        when {
+            resultCode != Activity.RESULT_OK -> return
+            requestCode == REQUEST_CONTACT && data != null -> {
+                val contactUri: Uri? = data.data
+// Specify which fields you want your query to return values for
+                val queryFields = arrayOf(ContactsContract.Contacts.DISPLAY_NAME)
+// Perform your query - the contactUri is like a "where" clause here
+                val cursor = contactUri?.let {
+                    requireActivity().contentResolver
+                        .query(it, queryFields, null, null, null)
+                }
+                cursor?.use {
+// Verify cursor contains at least one result
+                    if (it.count == 0) {
+                        return
+                    }
+// Pull out the first column of the first row of data -
+// that is your suspect's name
+                    it.moveToFirst()
+                    val suspect = it.getString(0)
+                    crime.suspect = suspect
+                    crimeDetailViewModel.saveCrime(crime)
+                    suspectButton.text = suspect
+                }
+            }
+        }
+    }
+
+    //ch15
+    private fun getSuspectName(data: Intent): String? {
+        val contactUri = data.data
+        // Specify which fields you want your query to return values for
+        val queryFields = arrayOf(ContactsContract.Contacts._ID, ContactsContract.Contacts.DISPLAY_NAME)
+        // Perform your query - the contactUri is like a "where" clause here.
+        val c = activity!!.contentResolver
+            .query(contactUri!!, queryFields, null, null, null)
+        try {
+            // Double-check that you actually got results.
+            if (c!!.count == 0) {
+                return null
+            }
+            // Pull out the first column of the first row of data - that is your suspect's name.
+            c.moveToFirst()
+
+            crime.suspect= c.getString(0)
+            return c.getString(1)
+
+        } finally {
+            c!!.close()
+        }
+    }
+    // Ch15
+    private fun getSuspectPhoneNumber(contactId: String): String? {
+        var suspectPhoneNumber: String? = null
+        // The content URI of the CommonDataKinds.Phone
+        val phoneContactUri = ContactsContract.CommonDataKinds.Phone.CONTENT_URI
+        // The columns to return for each row
+        val queryFields = arrayOf(ContactsContract.Data.CONTACT_ID,
+            ContactsContract.CommonDataKinds.Phone.NUMBER, // which is the default phone number.
+            ContactsContract.CommonDataKinds.Phone.TYPE)
+        // Selection criteria
+        val selectionClause = ContactsContract.Data.CONTACT_ID + " = ?"
+        val selectionArgs = arrayOf("")
+        selectionArgs[0] = contactId
+        // Do a query against the table and return a Cursor object
+        val c = activity!!.contentResolver
+            .query(phoneContactUri, queryFields, selectionClause, selectionArgs, null)
+        try {
+            // Double-check that you actually got results.
+            if (c!!.count == 0) {
+                return null
+            }
+            while (c.moveToNext()) {
+                val phoneType = c.getInt(c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.TYPE))
+                if (phoneType == ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE) {
+                    suspectPhoneNumber = c.getString(c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DATA))
+                    break
+                }
+            }
+        } finally {
+            c!!.close()
+        }
+        return suspectPhoneNumber
+    }
+
+    // Ch15
+    private fun hasContactPermission(): Boolean {
+        val result = ContextCompat.checkSelfPermission(activity!!, CONTACTS_PERMISSIONS[0])
+        return result == PackageManager.PERMISSION_GRANTED
+    }
+
+    // Ch15
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        when (requestCode) {
+            REQUEST_CONTACTS_PERMISSIONS -> if (hasContactPermission()) {
+                updateSuspectPhone()
+            }
+        }
+    }
+
+    // Ch15
+    private fun updateSuspectPhone() {
+        val suspectPhoneNumber = getSuspectPhoneNumber(crime.suspectID!!)
+        crime.suspectPhone = suspectPhoneNumber
+    }
+
+    private fun getCrimeReport(): String {
+        val solvedString = if (crime.isSolved) {
+            getString(R.string.crime_report_solved)
+        } else {
+            getString(R.string.crime_report_unsolved)
+        }
+        val dateString = DateFormat.format(DATE_FORMAT, crime.date).toString()
+        var suspect = if (crime.suspect.isBlank()) {
+            getString(R.string.crime_report_no_suspect)
+        } else {
+            getString(R.string.crime_report_suspect, crime.suspect)
+        }
+        return getString(R.string.crime_report,
+            crime.title, dateString, solvedString, suspect)
     }
 
     companion object {
