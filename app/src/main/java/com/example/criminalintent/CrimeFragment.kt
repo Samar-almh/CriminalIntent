@@ -263,7 +263,7 @@ private val REQUEST_CONTACTS_PERMISSIONS = 3
 
     private fun updateUI() {
         titleField.setText(crime.title)
-        dateButton.text = crime.date.toString()
+        dateButton.text =java.text.DateFormat.getDateInstance(java.text.DateFormat.FULL).format(this.crime.date).toString()
         //solvedCheckBox.isChecked = crime.isSolved
         solvedCheckBox.apply {
             isChecked = crime.isSolved
@@ -329,7 +329,7 @@ private val REQUEST_CONTACTS_PERMISSIONS = 3
         } else {
             getString(R.string.crime_report_unsolved)
         }
-        val dateString = DateFormat.format(DATE_FORMAT, crime.date).toString()
+        val dateString = java.text.DateFormat.getDateInstance(java.text.DateFormat.FULL).format(this. crime.date).toString()
         var suspect = if (crime.suspect.isBlank()) {
             getString(R.string.crime_report_no_suspect)
         } else {
